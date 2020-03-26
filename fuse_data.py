@@ -34,7 +34,9 @@ for i in range(population.shape[0]):
             idx = fips_to_idx[fips]
             geojson['features'][idx]['properties']['population'] = count
         except:
-            print('Failed FIPS: {}'.format(fips))
+            print('A Failed FIPS: {}'.format(fips))
+max_confirmed_covid = 0
+max_deaths = 0
 for i in range(covid_cases.shape[0]): 
     row = covid_cases.iloc[i]
     if not pd.isna(row['FIPS']):   
@@ -52,21 +54,42 @@ for i in range(covid_cases.shape[0]):
         }
         try:
             idx = fips_to_idx[fips]
-            geojson['features'][idx]['properties']['covid_stats'] = covid_stats
+            print(idx)
+            if confirmed_covid > max_confirmed_covid: 
+                max_confirmed_covid = confirmed_covid
+            if deaths > max_deaths:
+                max_deaths = deaths 
+      
+            geojson['features'][idx]['properties']['covid_confirmed'] = confirmed_covid 
+            geojson['features'][idx]['properties']['covid_deaths'] = deaths  
+            geojson['features'][idx]['properties']['covid_update'] = last_updated 
+            
         except: 
-            print('Failed FIPS: {}'.format(fips)) 
+            geojson['features'][idx]['properties']['covid_confirmed'] = 0
+            geojson['features'][idx]['properties']['covid_confirmed_scaled'] = 0
+            geojson['features'][idx]['properties']['covid_deaths'] = 0
+            geojson['features'][idx]['properties']['covid_deaths_scaled'] = 0 
+            geojson['features'][idx]['properties']['covid_update'] = 0
+            print('B Failed FIPS: {}'.format(fips)) 
+        
 
 for i in range(len(geojson['features'])):
-    if 'covid_stats' not in geojson['features'][i]['properties']: 
-        geojson['features'][i]['properties']['covid_stats'] = {
-            'confirmed' : 0, 
-            'deaths' : 0,
-            'last_update' : "2020-03-23 23:19:34"
-        }
+
+
+    if 'covid_confirmed' not in geojson['features'][i]['properties']: 
+        geojson['features'][i]['properties']['covid_confirmed'] = 0
+        geojson['features'][i]['properties']['covid_confirmed_scaled'] = 0
+        geojson['features'][i]['properties']['covid_deaths'] = 0
+        geojson['features'][i]['properties']['covid_deaths_scaled'] = 0 
+        geojson['features'][i]['properties']['covid_update'] = 0
     if 'poverty_rate' not in geojson['features'][i]['properties']: 
         geojson['features'][i]['properties']['poverty_rate'] = 0.0
     if 'population' not in geojson['features'][i]['properties']: 
         geojson['features'][i]['properties']['population'] = 0.0
+    confimed_covid = geojson['features'][i]['properties']['covid_confirmed'] 
+    deaths = geojson['features'][i]['properties']['covid_deaths'] 
+    geojson['features'][i]['properties']['covid_confirmed_scaled'] = int(round(confirmed_covid/max_confirmed_covid))
+    geojson['features'][i]['properties']['covid_deaths_scaled'] = int(round(deaths/max_deaths))
 
 for i in range(poverty_estimates.shape[0]): 
     row = poverty_estimates.iloc[i]
@@ -78,7 +101,7 @@ for i in range(poverty_estimates.shape[0]):
         idx = fips_to_idx[fips]
         geojson['features'][idx]['properties']['poverty_rate'] = poverty_rate
     except:
-        print('Failed FIPS: {}'.format(fips))
+        print('C Failed FIPS: {}'.format(fips))
 
 with open('./gen_data/fused_coronavirus_county_data.json', 'w') as f:
     f.write(json.dumps(geojson))
@@ -104,13 +127,15 @@ for i in range(hospitals.shape[0]):
     try:
         obj['county_poverty_pct'] = 100*geojson['features'][fips_to_idx[fips]]['properties']['poverty_rate'] 
         obj['county_population'] = geojson['features'][fips_to_idx[fips]]['properties']['population']
-        obj['county_confirmed_cases'] = geojson['features'][fips_to_idx[fips]]['properties']['covid_stats']['confirmed'] 
-        obj['county_confirmed_deaths'] = geojson['features'][fips_to_idx[fips]]['properties']['covid_stats']['deaths']
+        obj['county_confirmed_cases'] = geojson['features'][fips_to_idx[fips]]['properties']['covid_confirmed'] 
+        obj['county_confirmed_deaths'] = geojson['features'][fips_to_idx[fips]]['properties']['covid_deaths']
+        
     except: 
         obj['county_poverty_pct'] = 0.0
         obj['county_population'] = 0.0
         obj['county_confirmed_cases'] = 0.0
         obj['county_confirmed_deaths'] = 0.0
+    
     obj['fips'] = fips
     obj['name'] = row['NAME'] 
     obj['address'] = row['ADDRESS'] + ', ' + row['CITY'] + ', ' + row['STATE'] + ' ' + str(row['ZIP']) 

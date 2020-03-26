@@ -70,8 +70,7 @@ for h in hospitals:
     idx += 1
 
 for c in county_data['features']:
-    confirmed = c['properties']['covid_stats']['confirmed']
-
+    confirmed = c['properties']['covid_confirmed']
     county_hospitals = list(fips_to_hospitals[c['id']]['idx'].keys()) 
     total_beds = sum([max(0, hospitals[idx]['beds']) for idx in county_hospitals])
     if confirmed > 0 and total_beds > 0:
@@ -143,7 +142,7 @@ for h in hospitals:
             icu_beds = int(round(.1*h['beds']))
         else: 
             icu_beds = -999
-        n_ventilators = max(.1, random.random()) * max(0, icu_beds)
+        n_ventilators = int(round(max(.1, random.random()) * max(0, icu_beds)))
 
         n_cases = fips_to_hospitals[h['fips']]['uuid'][h['uuid']]
         if n_cases > 0:
@@ -169,6 +168,7 @@ for h in hospitals:
                 request_text = ok_hospital_requests[request_index]
             else: 
                 request_text = hit_hospital_requests[request_index]
+            #print(h['uuid'])
             req = make_request(h['uuid'], request_text, icu_beds, n_ventilators, days_ppe, n_cases, t_string)
             fake_data += [req]
 '''
